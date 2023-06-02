@@ -1,0 +1,128 @@
+module Library where
+import PdePreludat
+
+doble :: Number -> Number
+doble numero = numero + numero
+
+--PUNTO 1
+type Poder = Nave -> Nave
+data Nave = UnaNave {
+    nombre :: String,
+    durabilidad :: Number,
+    escudo :: Number,
+    ataque :: Number,
+    poder :: Poder
+}deriving (Show,Eq)
+
+tieFighter :: Nave
+tieFighter = UnaNave "TIE Fighter" 200 100 50 turbo
+
+turbo :: Poder
+turbo nave = nave {ataque = ataque nave + 25}
+
+
+xWing :: Nave
+xWing = UnaNave "X Wing" 300 150 100 reparacion 
+
+reparacion :: Poder
+reparacion nave = nave {durabilidad = durabilidad nave + 50, ataque = ataque nave - 30}
+
+
+naveDeDarthVader :: Nave
+naveDeDarthVader = UnaNave "Nave de Darth Vader" 500 300 200 superTurbo
+
+superTurbo :: Poder
+superTurbo nave = aumentarDurabilidad 45 (tripleTurbo (nave))
+
+tripleTurbo :: Poder
+tripleTurbo nave = foldr ($) nave [turbo,turbo,turbo]
+
+aumentarDurabilidad :: Number-> Poder
+aumentarDurabilidad numero nave = nave {durabilidad = durabilidad nave + numero}
+
+
+millenniumFalcon :: Nave
+millenniumFalcon = UnaNave "Millennium Falcon" 1000 500 50 reparacionEmergencia
+
+reparacionEmergencia :: Poder
+reparacionEmergencia nave = (reparacion nave) {escudo = escudo nave + 100}
+
+
+caza :: Nave
+caza = UnaNave "Caza Aereo" 200 150 250 campoMagnetico
+
+campoMagnetico :: Poder
+campoMagnetico nave = nave {escudo = escudo nave + 100}
+
+--PUNTO 2
+type Flota = [Nave]
+
+durabilidadTotal :: Flota -> Number
+durabilidadTotal flota = sum (map (durabilidad) flota)
+
+--PUNTO 3
+luegoDeSerAtacada :: Nave -> Nave -> Nave
+luegoDeSerAtacada naveAtacada naveAtacante = atacar (activarPoder naveAtacada) (activarPoder naveAtacante)
+
+activarPoder :: Poder
+activarPoder nave = poder nave (nave)
+
+atacar :: Nave -> Nave -> Nave
+atacar naveAtacada naveAtacante | (durabilidad naveAtacada) > (ataque naveAtacante) = naveAtacada {durabilidad = durabilidad naveAtacada - ataque naveAtacante}
+    |otherwise =  naveAtacada {durabilidad = 0}
+
+--PUNTO 4
+estaFueraDeCombate :: Nave -> Bool
+estaFueraDeCombate = (==0). durabilidad 
+
+--PUNTO 5
+type FlotaEnemiga = Flota
+type Estrategia =  Nave -> Bool
+
+--solo atacar a las naves de la flota que cumplan con la estrategia
+
+naveDebil :: Estrategia
+naveDebil = (< 200) . escudo  
+
+naveConCiertaPeligrosidad :: Number -> Estrategia
+naveConCiertaPeligrosidad ataqueDado nave = ataque nave > ataqueDado
+
+navesQueQuedarianFuera :: Nave -> Estrategia
+navesQueQuedarianFuera naveAtacante naveEnemiga = estaFueraDeCombate (atacar naveEnemiga naveAtacante)
+
+navesConfiscables :: Nave -> Estrategia
+navesConfiscables naveAtacante naveEnemiga = naveConfiscada (atacar naveEnemiga naveAtacante)
+
+naveConfiscada :: Estrategia
+naveConfiscada = (== 0) . durabilidad 
+
+ataqueFlotaEnemiga :: Nave -> FlotaEnemiga -> Estrategia -> FlotaEnemiga
+ataqueFlotaEnemiga _ [] _ = []
+ataqueFlotaEnemiga naveAtacante (x:xs) estrategia | estrategia x = (atacar x naveAtacante : ataqueFlotaEnemiga naveAtacante xs estrategia)
+    | otherwise = ataqueFlotaEnemiga naveAtacante xs estrategia
+
+
+--PUNTO 6
+cualMinimizaDurabilidad ::  Nave -> FlotaEnemiga -> Estrategia -> Estrategia -> Estrategia
+cualMinimizaDurabilidad naveAtacante flotaEnemiga estrategia1 estrategia2 | durabilidadDeUnaFlota(ataqueFlotaEnemiga naveAtacante flotaEnemiga estrategia1 ) > durabilidadDeUnaFlota(ataqueFlotaEnemiga naveAtacante flotaEnemiga estrategia2) = estrategia2 
+    | otherwise = estrategia1 
+--la mision es "ataqueFlotaEnemiga" con la estrategia que resulte mas óptima
+
+durabilidadDeUnaFlota :: Flota -> Number
+durabilidadDeUnaFlota = durabilidadTotal
+
+flotaInfinita :: Flota
+flotaInfinita = (caza:flotaInfinita)
+
+--PUNTO 7
+--a
+-- No es posible determinar la durabilidad total de una flota infinita, no hay ninguna condicion que rompa el ciclo, por ende este se ejecuta acumulando eternamente la durabilidad. (ni siquiera con evaluacion diferida)
+--b
+-- En el caso de que la flotaInfinita este constituida por flotas a las cuales no conviene atacar (la estrategia devuelve False)
+-- se sigue analizando sin proporcionar ninguna informacion en la terminal
+-- En el caso de que la flotaInfinita sea adecuada para atacar, Por ejemplo ataqueFlotaEnemiga tieFighter naveDebil flotaInfinita, se devuelve la lista de cazas
+-- actualizados, pero al ser una lista infinita la ejecucion nunca se detiene.
+-- Pero en estos casos se puede utilizar "evaluacion diferida" y retornar algunas de las flotas despues del ataque, Por Ejemplo: 
+{- take 2 (ataqueFlotaEnemiga tieFighter flotaInfinita naveDebil)
+[UnaNave {nombre = "Caza Aereo", durabilidad = 150, escudo = 150, ataque = 250, poder = <una función>},
+UnaNave {nombre = "Caza Aereo", durabilidad = 150, escudo = 150, ataque = 250, poder = <una función>}] -}
