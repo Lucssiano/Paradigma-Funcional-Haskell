@@ -115,6 +115,7 @@ mayorMinimizacionDurabilidad nave flota estrategia1 estrategia2
 No, la funcion durabilidadTotalFlota querrá sumar la durabilidad de todas las naves, las cuales son infinitas entonces nunca terminará de sumar. Es decir, al ser una flota infinita de naves no puede calcular la suma de sus durabilidades. El programa "explota".
 ¿Qué se obtiene como respuesta cuando se lleva adelante una misión sobre ella? Justificar conceptualmente.
 Sucede lo mismo que antes, va a querer filtrar las naves de la flota por una estrategia especifica y nunca va a poder parar de filtrar, por lo tanto ni siquiera llega a realizar el map y hacer la mision con la nave sobre las naves de la flota
+Por otro lado, si acortamos la flota antes de realizar la mision (por ejemplo con take 3, ahi si se podria debido al lazy evaluation)
 -}
 
 flotaInfinitaDeNaves :: Nave -> Flota
